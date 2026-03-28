@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Age of Average: Define Your Average</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root{
+      --bg:#08111f;
+      --panel:#0f1b2d;
+      --panel-2:#13223a;
+      --stroke:rgba(255,255,255,0.08);
+      --text:#edf3ff;
+      --muted:#a8b7d4;
+      --accent:#61f2a7;
+      --accent-2:#7ac7ff;
+      --avg:#ffd166;
+      --danger:#ff7a90;
+      --dot:rgba(255,255,255,0.18);
+      --shadow:0 18px 50px rgba(0,0,0,0.35);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(122,199,255,0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(97,242,167,0.10), transparent 30%),
+        linear-gradient(180deg, #07101d 0%, #0a1322 100%);
+      color:var(--text);
+      overflow:hidden;
+    }
+
+    .app{
+      display:grid;
+      grid-template-columns: 380px 1fr;
+      height:100vh;
+      gap:18px;
+      padding:18px;
+    }
+
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid var(--stroke);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .sidebar{
+      padding:18px 18px 14px 18px;
+      overflow:auto;
+    }
+
+    .title{
+      margin:0 0 6px 0;
+      font-size:1.55rem;
+      line-height:1.1;
+      letter-spacing:-0.03em;
+    }
+
+    .subtitle{
+      margin:0 0 16px 0;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:0.95rem;
+    }
+
+    .section{
+      margin-top:16px;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.05);
+    }
+
+    .section h3{
+      margin:0 0 10px 0;
+      font-size:0.98rem;
+      letter-spacing:0.01em;
+    }
+
+    .section p{
+      margin:0 0 8px 0;
+      color:var(--muted);
+      font-size:0.88rem;
+      line-height:1.45;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:10px;
+    }
+
+    .field label{
+      font-size:0.8rem;
+      color:#dce7ff;
+      font-weight:600;
+      letter-spacing:0.01em;
+    }
+
+    .field input,
+    .field select{
+      width:100%;
+      border:none;
+      outline:none;
+      border-radius:12px;
+      background:#0b1627;
+      color:var(--text);
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,0.08);
+      font-size:0.92rem;
+    }
+
+    .field input[type="range"]{
+      padding:0;
+      background:transparent;
+      border:none;
+    }
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
+    }
+
+    .chip{
+      border:1px solid rgba(255,255,255,0.10);
+      background:#0b1627;
+      color:#d9e6ff;
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:0.82rem;
+      cursor:pointer;
+      transition:0.2s ease;
+      user-select:none;
+    }
+
+    .chip:hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,0.20);
+    }
+
+    .chip.active{
+      background:rgba(97,242,167,0.12);
+      border-color:rgba(97,242,167,0.50);
+      color:#dfffee;
+      box-shadow:0 0 0 1px rgba(97,242,167,0.15) inset;
+    }
+
+    .metric-buttons{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+    }
+
+    .metric-btn{
+      padding:10px 8px;
+      border-radius:14px;
+      text-align:center;
+      background:#0b1627;
+      border:1px solid rgba(255,255,255,0.08);
+      cursor:pointer;
+      font-size:0.85rem;
+      color:#dce7ff;
+      transition:0.2s ease;
+    }
+
+    .metric-btn.active{
+      background:linear-gradient(180deg, rgba(122,199,255,0.18), rgba(97,242,167,0.14));
+      border-color:rgba(122,199,255,0.45);
+      color:white;
+    }
+
+    .small{
+      font-size:0.82rem;
+      color:var(--muted);
+    }
+
+    .story{
+      margin-top:10px;
+      padding:12px 14px;
+      background:rgba(255,255,255,0.035);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:16px;
+      line-height:1.5;
+      color:#eff6ff;
+      font-size:0.9rem;
+    }
+
+    .btn-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    button.action{
+      border:none;
+      border-radius:14px;
+      padding:11px 12px;
+      font-weight:700;
+      cursor:pointer;
+      transition:0.2s ease;
+    }
+
+    .primary{
+      background:linear-gradient(135deg, var(--accent), #a3ffcf);
+      color:#042315;
+    }
+
+    .secondary{
+      background:#0b1627;
+      color:#dce7ff;
+      border:1px solid rgba(255,255,255,0.10);
+    }
+
+    button.action:hover{
+      transform:translateY(-1px);
+    }
+
+    .main{
+      display:grid;
+      grid-template-rows:auto auto 1fr auto;
+      gap:14px;
+      min-width:0;
+      padding:16px;
+    }
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .headline{
+      margin:0;
+      font-size:1.4rem;
+      letter-spacing:-0.03em;
+    }
+
+    .headline-sub{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      max-width:850px;
+      line-height:1.45;
+    }
+
+    .legend{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:0.85rem;
+      align-items:center;
+    }
+
+    .legend-item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .swatch{
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      display:inline-block;
+    }
+
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .card{
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.06);
+      min-width:0;
+    }
+
+    .card .label{
+      color:var(--muted);
+      font-size:0.82rem;
+      margin-bottom:8px;
+    }
+
+    .card .value{
+      font-size:1.55rem;
+      font-weight:800;
+      letter-spacing:-0.03em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .card .sub{
+      margin-top:5px;
+      color:#cfe1ff;
+      font-size:0.85rem;
+    }
+
+    .zoom-controls{
+      position:absolute;
+      bottom:14px;
+      right:14px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      z-index:3;
+    }
+
+    .zoom-controls .divider{
+      width:1px;
+      height:20px;
+      background:rgba(255,255,255,0.12);
+      margin:0 2px;
+    }
+
+    .dpad{
+      display:grid;
+      grid-template-columns:repeat(3, 32px);
+      grid-template-rows:repeat(3, 32px);
+      gap:3px;
+    }
+
+    .dpad-center{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .zoom-stack{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .zoom-btn{
+      width:32px;
+      height:32px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(11,22,39,0.85);
+      color:#dce7ff;
+      font-size:1rem;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:0.15s ease;
+      backdrop-filter:blur(6px);
+      line-height:1;
+      padding:0;
+    }
+
+    .zoom-btn:hover{
+      background:rgba(122,199,255,0.15);
+      border-color:rgba(122,199,255,0.45);
+      color:#7ac7ff;
+    }
+
+    .zoom-btn:active{
+      transform:scale(0.93);
+    }
+
+    .viz-wrap{
+      position:relative;
+      border-radius:24px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(255,255,255,0.03), transparent 38%),
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.06);
+      min-height:420px;
+    }
+
+    svg{
+      display:block;
+      width:100%;
+      height:100%;
+    }
+
+    .footer-note{
+      color:var(--muted);
+      font-size:0.82rem;
+      line-height:1.4;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .tooltip{
+      position:absolute;
+      pointer-events:none;
+      background:rgba(6,12,22,0.95);
+      color:white;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.10);
+      font-size:0.82rem;
+      line-height:1.45;
+      opacity:0;
+      transform:translate(-50%, -120%);
+      box-shadow:var(--shadow);
+      max-width:250px;
+    }
+
+    .empty{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:20px;
+      color:#dbe8ff;
+      background:rgba(4,10,18,0.5);
+      backdrop-filter: blur(4px);
+      z-index:2;
+    }
+
+    .empty.show{
+      display:flex;
+    }
+
+    .kbd{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:8px;
+      background:#0b1627;
+      border:1px solid rgba(255,255,255,0.08);
+      color:#dce7ff;
+      font-size:0.78rem;
+    }
+
+    @media (max-width: 1200px){
+      .app{
+        grid-template-columns:340px 1fr;
+      }
+      .cards{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 960px){
+      body{overflow:auto}
+      .app{
+        grid-template-columns:1fr;
+        height:auto;
+      }
+      .main{
+        min-height:900px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel sidebar">
+      <h1 class="title">The Age of Average</h1>
+      <p class="subtitle">
+        Define your own benchmark. Enter your profile, choose which traits should define your comparison group,
+        and watch the population re-form around your selected average.
+      </p>
+
+      <div class="section">
+        <h3>1) Your profile</h3>
+        <div class="grid">
+          <div class="field">
+            <label for="age">Age</label>
+            <input id="age" type="number" min="18" max="85" value="32" />
+          </div>
+          <div class="field">
+            <label for="gender">Gender</label>
+            <select id="gender"></select>
+          </div>
+
+          <div class="field">
+            <label for="education">Education</label>
+            <select id="education"></select>
+          </div>
+          <div class="field">
+            <label for="province">Province</label>
+            <select id="province"></select>
+          </div>
+
+          <div class="field">
+            <label for="employment_status">Employment</label>
+            <select id="employment_status"></select>
+          </div>
+          <div class="field">
+            <label for="industry">Industry</label>
+            <select id="industry"></select>
+          </div>
+
+          <div class="field">
+            <label for="marital_status">Marital status</label>
+            <select id="marital_status"></select>
+          </div>
+          <div class="field">
+            <label for="location_type">Location type</label>
+            <select id="location_type"></select>
+          </div>
+
+          <div class="field">
+            <label for="years_experience">Years of experience</label>
+            <input id="years_experience" type="number" step="1" min="0" max="60" value="8" />
+          </div>
+          <div class="field">
+            <label for="work_hours_per_week">Work hours / week</label>
+            <input id="work_hours_per_week" type="number" step="1" min="0" max="100" value="40" />
+          </div>
+
+          <div class="field">
+            <label for="income">Income</label>
+            <input id="income" type="number" step="100" min="0" value="65000" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>2) Define your comparison group</h3>
+        <p>Select one or many traits. The group will include only people who match those chosen traits.</p>
+        <div id="filterChips" class="chips"></div>
+
+        <div class="field" style="margin-top:12px;">
+          <label for="ageBand">Age tolerance when age is selected: <span id="ageBandLabel">±5 years</span></label>
+          <input id="ageBand" type="range" min="0" max="15" step="1" value="5" />
+        </div>
+
+        <div class="story" id="groupSummary">
+          Comparing you to <strong>everyone</strong>.
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>3) Choose a metric</h3>
+        <p>The population field rearranges around the selected metric.</p>
+        <div class="metric-buttons" id="metricButtons"></div>
+      </div>
+
+      <div class="section">
+        <h3>4) Interaction tips</h3>
+        <p>Hover dots for details. Try changing the selected benchmark from broad to very specific and watch how “average” moves.</p>
+        <p class="small">
+          Best demo flow for peer review:
+          <span class="kbd">everyone</span>
+          →
+          <span class="kbd">province</span>
+          →
+          <span class="kbd">province + gender</span>
+          →
+          <span class="kbd">province + gender + education</span>
+        </p>
+
+        <div class="btn-row">
+          <button class="action primary" id="randomizeBtn">Generate sample user</button>
+          <button class="action secondary" id="resetBtn">Reset filters</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel main">
+      <div class="topbar">
+        <div>
+          <h2 class="headline">A living field of averages</h2>
+          <p class="headline-sub" id="headlineText">
+            The highlighted green point is you. The gold band is the group average zone. Every other point is one person from the currently selected comparison group.
+          </p>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background: rgba(255,255,255,0.4);"></span> Comparison group</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--avg);"></span> Average zone</div>
+          <div class="legend-item"><span class="swatch" style="background: var(--accent); box-shadow: 0 0 10px var(--accent);"></span> You</div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="label">Comparison group size</div>
+          <div class="value" id="groupSizeCard">—</div>
+          <div class="sub" id="groupSizeSub">people in current benchmark</div>
+        </div>
+        <div class="card">
+          <div class="label">Group average</div>
+          <div class="value" id="avgCard">—</div>
+          <div class="sub" id="avgSub">for selected metric</div>
+        </div>
+        <div class="card">
+          <div class="label">Your value</div>
+          <div class="value" id="userCard">—</div>
+          <div class="sub" id="userSub">for selected metric</div>
+        </div>
+        <div class="card">
+          <div class="label">Your percentile</div>
+          <div class="value" id="pctCard">—</div>
+          <div class="sub" id="pctSub">within selected group</div>
+        </div>
+      </div>
+
+      <div class="viz-wrap">
+        <svg id="viz"></svg>
+        <div class="tooltip" id="tooltip"></div>
+        <div class="zoom-controls">
+          <div class="dpad">
+            <span></span>
+            <button class="zoom-btn" id="panUp" title="Pan up">&#8593;</button>
+            <span></span>
+            <button class="zoom-btn" id="panLeft" title="Pan left">&#8592;</button>
+            <span class="dpad-center"></span>
+            <button class="zoom-btn" id="panRight" title="Pan right">&#8594;</button>
+            <span></span>
+            <button class="zoom-btn" id="panDown" title="Pan down">&#8595;</button>
+            <span></span>
+          </div>
+          <div class="divider"></div>
+          <div class="zoom-stack">
+            <button class="zoom-btn" id="zoomIn" title="Zoom in">+</button>
+            <button class="zoom-btn" id="zoomOut" title="Zoom out">&#8722;</button>
+          </div>
+          <div class="divider"></div>
+          <button class="zoom-btn" id="zoomReset" title="Reset view">&#8635;</button>
+        </div>
+        <div class="empty" id="emptyState">
+          <div>
+            <h3 style="margin:0 0 8px 0;">No one matches that exact benchmark</h3>
+            <p style="margin:0;color:var(--muted);max-width:420px;">
+              Try removing one filter or widening the age tolerance so the comparison group is large enough to be meaningful.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <div id="narrative">
+          You are currently being compared with everyone in the dataset.
+        </div>
+        <div>
+          Data source: <strong>life_of_average_dataset.csv</strong> · Built in one HTML file with D3.js
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const DATA_PATH = "life_of_average_dataset.csv";
+
+    const categoricalFields = [
+      "gender",
+      "education",
+      "province",
+      "employment_status",
+      "industry",
+      "marital_status",
+      "location_type"
+    ];
+
+    const profileFields = [
+      "age",
+      "gender",
+      "education",
+      "province",
+      "employment_status",
+      "industry",
+      "marital_status",
+      "location_type",
+      "years_experience",
+      "work_hours_per_week",
+      "income"
+    ];
+
+    const metricConfig = {
+      income: { label: "Income", format: d => "$" + d3.format(",.0f")(d), nice: "currency" },
+      work_hours_per_week: { label: "Work Hours / Week", format: d => d3.format(".0f")(d), nice: "number" },
+      years_experience: { label: "Years of Experience", format: d => d3.format(".0f")(d), nice: "number" }
+    };
+
+    const metricKeys = Object.keys(metricConfig);
+
+    const state = {
+      data: [],
+      metric: "income",
+      activeFilters: new Set(),
+      ageBand: 5,
+      width: 1000,
+      height: 650
+    };
+
+    const svg = d3.select("#viz");
+    const tooltip = d3.select("#tooltip");
+    const emptyState = document.getElementById("emptyState");
+
+    function addInfoIcon(parent, x, y, html) {
+      const g = parent.append("g")
+        .attr("transform", `translate(${x},${y})`)
+        .style("cursor", "pointer");
+
+      g.append("circle")
+        .attr("r", 7)
+        .attr("fill", "rgba(122,199,255,0.15)")
+        .attr("stroke", "rgba(122,199,255,0.50)")
+        .attr("stroke-width", 1);
+
+      g.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("fill", "#7ac7ff")
+        .attr("font-size", 10)
+        .attr("font-weight", 700)
+        .attr("pointer-events", "none")
+        .text("i");
+
+      g.on("mousemove", function(event) {
+        const wrap = document.querySelector(".viz-wrap");
+        const rect = wrap.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        tooltip.style("opacity", 1).html(html);
+
+        const tipW = tooltip.node().offsetWidth;
+        const tipH = tooltip.node().offsetHeight;
+
+        // Flip below cursor if too close to top edge
+        const showBelow = y - tipH * 1.2 < 8;
+        const clampedX = Math.max(tipW / 2 + 8, Math.min(x, rect.width - tipW / 2 - 8));
+
+        tooltip
+          .style("left", `${clampedX}px`)
+          .style("top", `${y}px`)
+          .style("transform", showBelow ? "translate(-50%, 12px)" : "translate(-50%, -120%)");
+      })
+      .on("mouseleave", function() {
+        tooltip.style("opacity", 0).style("transform", "translate(-50%, -120%)");
+      });
+    }
+
+    const margin = { top: 44, right: 34, bottom: 40, left: 82 };
+
+    const rootG = svg.append("g");
+    const defs = svg.append("defs");
+
+    const glow = defs.append("filter")
+      .attr("id", "glow")
+      .attr("x", "-50%")
+      .attr("y", "-50%")
+      .attr("width", "200%")
+      .attr("height", "200%");
+
+    glow.append("feGaussianBlur")
+      .attr("stdDeviation", "4")
+      .attr("result", "blur");
+
+    glow.append("feMerge")
+      .selectAll("feMergeNode")
+      .data(["blur", "SourceGraphic"])
+      .join("feMergeNode")
+      .attr("in", d => d);
+
+    const avgGradient = defs.append("linearGradient")
+      .attr("id", "avgGradient")
+      .attr("x1", "0%").attr("x2", "0%")
+      .attr("y1", "0%").attr("y2", "100%");
+    avgGradient.append("stop").attr("offset", "0%").attr("stop-color", "rgba(255,209,102,0.25)");
+    avgGradient.append("stop").attr("offset", "100%").attr("stop-color", "rgba(255,209,102,0.03)");
+
+    const bgGrid = rootG.append("g").attr("class", "grid");
+    const avgBandG = rootG.append("g").attr("class", "avg-band");
+    const axisG = rootG.append("g").attr("class", "axis");
+    const labelG = rootG.append("g").attr("class", "labels");
+    const dotsG = rootG.append("g").attr("class", "dots");
+    const userG = rootG.append("g").attr("class", "user");
+    const annotationG = rootG.append("g").attr("class", "annotation");
+
+    let currentZoomTransform = d3.zoomIdentity;
+
+    const zoomBehavior = d3.zoom()
+      .scaleExtent([0.5, 8])
+      .on("zoom", (event) => {
+        currentZoomTransform = event.transform;
+        const t = event.transform;
+        rootG.attr("transform",
+          `translate(${margin.left + t.x},${margin.top + t.y}) scale(${t.k})`
+        );
+      });
+
+    svg.call(zoomBehavior);
+    svg.on("dblclick.zoom", () => {
+      svg.transition().duration(500).call(zoomBehavior.transform, d3.zoomIdentity);
+    });
+
+    const PAN_STEP = 60;
+    const ZOOM_FACTOR = 1.35;
+
+    document.getElementById("zoomIn").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.scaleBy, ZOOM_FACTOR);
+    });
+    document.getElementById("zoomOut").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.scaleBy, 1 / ZOOM_FACTOR);
+    });
+    document.getElementById("panLeft").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.translateBy, PAN_STEP, 0);
+    });
+    document.getElementById("panRight").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.translateBy, -PAN_STEP, 0);
+    });
+    document.getElementById("panUp").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.translateBy, 0, PAN_STEP);
+    });
+    document.getElementById("panDown").addEventListener("click", () => {
+      svg.transition().duration(220).call(zoomBehavior.translateBy, 0, -PAN_STEP);
+    });
+    document.getElementById("zoomReset").addEventListener("click", () => {
+      svg.transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
+    });
+
+    function humanize(str){
+      return str.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function populateSelect(id, values){
+      const sel = document.getElementById(id);
+      sel.innerHTML = values.map(v => `<option value="${v}">${humanize(String(v))}</option>`).join("");
+    }
+
+    function initializeMetricButtons(){
+      const container = document.getElementById("metricButtons");
+      container.innerHTML = "";
+      metricKeys.forEach(key => {
+        const btn = document.createElement("div");
+        btn.className = "metric-btn" + (key === state.metric ? " active" : "");
+        btn.textContent = metricConfig[key].label;
+        btn.onclick = () => {
+          state.metric = key;
+          document.querySelectorAll(".metric-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          update();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function initializeFilterChips(){
+      const container = document.getElementById("filterChips");
+      container.innerHTML = "";
+      const fields = ["age", ...categoricalFields];
+      fields.forEach(field => {
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.dataset.field = field;
+        chip.textContent = field === "age" ? "Age" : humanize(field);
+        chip.onclick = () => {
+          if(state.activeFilters.has(field)){
+            state.activeFilters.delete(field);
+            chip.classList.remove("active");
+          }else{
+            state.activeFilters.add(field);
+            chip.classList.add("active");
+          }
+          update();
+        };
+        container.appendChild(chip);
+      });
+    }
+
+    function getProfile(){
+      const profile = {};
+      profileFields.forEach(field => {
+        const el = document.getElementById(field);
+        if(!el) return;
+        const value = el.value;
+        profile[field] = ["age", "years_experience", "work_hours_per_week", "income"].includes(field)
+          ? +value
+          : value;
+      });
+      return profile;
+    }
+
+    function generateRandomUser(){
+      const row = state.data[Math.floor(Math.random() * state.data.length)];
+      profileFields.forEach(field => {
+        const el = document.getElementById(field);
+        if(!el) return;
+        el.value = row[field];
+      });
+      update();
+    }
+
+    function resetFilters(){
+      state.activeFilters.clear();
+      document.querySelectorAll(".chip").forEach(chip => chip.classList.remove("active"));
+      state.ageBand = 5;
+      document.getElementById("ageBand").value = 5;
+      document.getElementById("ageBandLabel").textContent = "±5 years";
+      update();
+    }
+
+    function filterData(data, profile){
+      let filtered = data;
+
+      if(state.activeFilters.has("age")){
+        filtered = filtered.filter(d => Math.abs(d.age - profile.age) <= state.ageBand);
+      }
+
+      categoricalFields.forEach(field => {
+        if(state.activeFilters.has(field)){
+          filtered = filtered.filter(d => d[field] === profile[field]);
+        }
+      });
+
+      return filtered;
+    }
+
+    function computeStats(group, profile, metric){
+      const values = group.map(d => +d[metric]).filter(v => Number.isFinite(v)).sort((a,b) => a-b);
+      const avg = d3.mean(values);
+      const median = d3.median(values);
+      const sd = d3.deviation(values) || 0;
+      const min = d3.min(values);
+      const max = d3.max(values);
+      const userValue = +profile[metric];
+
+      const lessEq = values.filter(v => v <= userValue).length;
+      const percentile = values.length ? (lessEq / values.length) * 100 : 0;
+
+      return { avg, median, sd, min, max, userValue, percentile, count: values.length };
+    }
+
+    function buildNarrative(profile, stats){
+      const metricLabel = metricConfig[state.metric].label;
+      const diff = stats.userValue - stats.avg;
+      const diffAbs = Math.abs(diff);
+      const fmt = metricConfig[state.metric].format;
+
+      let relation;
+      if(diffAbs <= (stats.sd || 1) * 0.15){
+        relation = "almost exactly at the average";
+      }else if(diff > 0){
+        relation = "above the average";
+      }else{
+        relation = "below the average";
+      }
+
+      const active = [...state.activeFilters];
+      let benchmarkText = "everyone";
+      if(active.length){
+        const parts = active.map(field => {
+          if(field === "age"){
+            return `people aged ${profile.age - state.ageBand}–${profile.age + state.ageBand}`;
+          }
+          return `${humanize(field).toLowerCase()} = ${humanize(String(profile[field]))}`;
+        });
+        benchmarkText = parts.join(", ");
+      }
+
+      return `
+        For <strong>${metricLabel.toLowerCase()}</strong>, you are <strong>${relation}</strong> among
+        <strong>${benchmarkText}</strong>.
+        Your value is <strong>${fmt(stats.userValue)}</strong> versus a group average of
+        <strong>${fmt(stats.avg)}</strong>,
+        placing you at about the <strong>${d3.format(".0f")(stats.percentile)}th percentile</strong>.
+      `;
+    }
+
+    function updateCards(stats){
+      const fmt = metricConfig[state.metric].format;
+      document.getElementById("groupSizeCard").textContent = d3.format(",")(stats.count);
+      document.getElementById("avgCard").textContent = fmt(stats.avg);
+      document.getElementById("userCard").textContent = fmt(stats.userValue);
+      document.getElementById("pctCard").textContent = d3.format(".0f")(stats.percentile) + "th";
+      document.getElementById("avgSub").textContent = metricConfig[state.metric].label + " average";
+      document.getElementById("userSub").textContent = "Your " + metricConfig[state.metric].label.toLowerCase();
+      document.getElementById("narrative").innerHTML = buildNarrative(getProfile(), stats);
+    }
+
+    function updateSummaryText(profile, count){
+      const active = [...state.activeFilters];
+      let text = "";
+
+      if(active.length === 0){
+        text = `Comparing you to <strong>everyone</strong> in the dataset (${d3.format(",")(count)} people).`;
+      }else{
+        const pieces = active.map(f => {
+          if(f === "age") return `age within ±${state.ageBand} years of ${profile.age}`;
+          return `${humanize(f)} = ${humanize(String(profile[f]))}`;
+        });
+        text = `Comparing you to people with <strong>${pieces.join("</strong>, <strong>")}</strong> (${d3.format(",")(count)} people).`;
+      }
+
+      document.getElementById("groupSummary").innerHTML = text;
+      document.getElementById("headlineText").textContent =
+        `The highlighted green point is you. The gold band shows the average zone for the selected comparison group. Right now the benchmark is based on ${active.length ? active.map(humanize).join(", ") : "the full population"}.`;
+    }
+
+    function resize(){
+      const wrap = document.querySelector(".viz-wrap");
+      const rect = wrap.getBoundingClientRect();
+      state.width = rect.width;
+      state.height = rect.height;
+      svg.attr("viewBox", `0 0 ${state.width} ${state.height}`);
+      update();
+    }
+
+    function draw(group, stats, profile){
+      const w = state.width;
+      const h = state.height;
+      const innerW = w - margin.left - margin.right;
+      const innerH = h - margin.top - margin.bottom;
+
+      const t = currentZoomTransform;
+      rootG.attr("transform",
+        `translate(${margin.left + t.x},${margin.top + t.y}) scale(${t.k})`
+      );
+
+      const metric = state.metric;
+      const domainPadding = (stats.max - stats.min || 1) * 0.08;
+      const y = d3.scaleLinear()
+        .domain([stats.min - domainPadding, stats.max + domainPadding])
+        .range([innerH, 0])
+        .nice();
+
+      const centerX = innerW / 2;
+      const xSpread = d3.scaleLinear()
+        .domain([0, Math.max(Math.abs(stats.max - stats.avg), Math.abs(stats.min - stats.avg)) || 1])
+        .range([0, innerW * 0.34]);
+
+      bgGrid.selectAll("*").remove();
+
+      bgGrid.selectAll(".grid-line")
+        .data(y.ticks(7))
+        .join("line")
+        .attr("class", "grid-line")
+        .attr("x1", 0)
+        .attr("x2", innerW)
+        .attr("y1", d => y(d))
+        .attr("y2", d => y(d))
+        .attr("stroke", "rgba(255,255,255,0.08)")
+        .attr("stroke-dasharray", "3,6");
+
+      axisG.attr("transform", `translate(0,0)`)
+        .call(d3.axisLeft(y).ticks(7).tickFormat(metricConfig[metric].format))
+        .call(g => g.selectAll(".domain").remove())
+        .call(g => g.selectAll("line").remove())
+        .call(g => g.selectAll("text").attr("fill", "#b8c8e6").attr("font-size", 12));
+
+      labelG.selectAll("*").remove();
+
+      const yLabelText = labelG.append("text")
+        .attr("x", -margin.left + 10)
+        .attr("y", -14)
+        .attr("fill", "#dce7ff")
+        .attr("font-size", 12)
+        .attr("font-weight", 700)
+        .text(metricConfig[metric].label);
+
+      const yBBox = yLabelText.node().getBBox();
+      addInfoIcon(labelG, yBBox.x + yBBox.width + 12, -14,
+        `<strong>Y-axis:</strong> The selected metric value being compared across the group.<br>Currently showing: <strong>${metricConfig[metric].label}</strong>`);
+
+      addInfoIcon(labelG, innerW / 2, innerH + 32,
+        `<strong>X-axis:</strong> Horizontal spread showing distance from the group average. Points spread right if above average, left if below average. The horizontal position has no numeric scale — it is visual separation only.`);
+
+      const avgBandHalf = Math.max((stats.sd || 1) * 0.18, (stats.max - stats.min) * 0.035);
+      const avgTop = y(stats.avg + avgBandHalf);
+      const avgBottom = y(stats.avg - avgBandHalf);
+
+      avgBandG.selectAll("*").remove();
+
+      avgBandG.append("rect")
+        .attr("x", 0)
+        .attr("y", Math.min(avgTop, avgBottom))
+        .attr("width", innerW)
+        .attr("height", Math.abs(avgBottom - avgTop))
+        .attr("fill", "url(#avgGradient)")
+        .attr("stroke", "rgba(255,209,102,0.22)")
+        .attr("stroke-width", 1.2)
+        .attr("rx", 10);
+
+      avgBandG.append("line")
+        .attr("x1", 0)
+        .attr("x2", innerW)
+        .attr("y1", y(stats.avg))
+        .attr("y2", y(stats.avg))
+        .attr("stroke", "#ffd166")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "7,5");
+
+      avgBandG.append("text")
+        .attr("x", innerW - 6)
+        .attr("y", y(stats.avg) - 10)
+        .attr("text-anchor", "end")
+        .attr("fill", "#ffe3a1")
+        .attr("font-size", 12)
+        .attr("font-weight", 700)
+        .text("GROUP AVERAGE");
+
+        const MAX_DOTS = 500;
+      const sample = group.length > MAX_DOTS
+        ? group.filter(() => Math.random() < MAX_DOTS / group.length).slice(0, MAX_DOTS)
+        : group;
+
+      const simNodes = sample.map((d, i) => {
+        const deviation = Math.abs(d[metric] - stats.avg);
+        const side = (i % 2 === 0 ? -1 : 1);
+        return {
+          ...d,
+          radius: 4.4,
+          x: centerX + side * xSpread(deviation) * (0.25 + Math.random() * 0.75),
+          y: y(d[metric])
+        };
+      });
+
+      const simulation = d3.forceSimulation(simNodes)
+        .force("x", d3.forceX(d => {
+          const deviation = Math.abs(d[metric] - stats.avg);
+          const side = d[metric] >= stats.avg ? 1 : -1;
+          return centerX + side * xSpread(deviation);
+        }).strength(0.18))
+        .force("y", d3.forceY(d => y(d[metric])).strength(1))
+        .force("collide", d3.forceCollide(4.8))
+        .stop();
+
+      for(let i = 0; i < 90; i++) simulation.tick();
+
+      const points = dotsG.selectAll("circle.person")
+        .data(simNodes, d => d.__id || (d.__id = Math.random().toString(36).slice(2)));
+
+      points.join(
+        enter => enter.append("circle")
+          .attr("class", "person")
+          .attr("cx", centerX)
+          .attr("cy", y(stats.avg))
+          .attr("r", 0)
+          .attr("fill", "rgba(255,255,255,0.20)")
+          .attr("stroke", "rgba(255,255,255,0.07)")
+          .attr("stroke-width", 0.8)
+          .call(enter => enter.transition().duration(800).ease(d3.easeCubicOut)
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => d.radius)),
+        update => update.call(update => update.transition().duration(850).ease(d3.easeCubicInOut)
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y)
+          .attr("r", d => d.radius)),
+        exit => exit.call(exit => exit.transition().duration(400).attr("r", 0).remove())
+      )
+      .on("mousemove", function(event, d){
+        tooltip
+          .style("opacity", 1)
+          .style("left", `${event.offsetX}px`)
+          .style("top", `${event.offsetY}px`)
+          .html(`
+            <strong>${humanize(d.gender)}, age ${d.age}</strong><br>
+            ${humanize(d.education)} · ${humanize(d.province)}<br>
+            ${metricConfig[metric].label}: <strong>${metricConfig[metric].format(d[metric])}</strong>
+          `);
+        d3.select(this).attr("fill", "rgba(255,255,255,0.45)");
+      })
+      .on("mouseleave", function(){
+        tooltip.style("opacity", 0);
+        d3.select(this).attr("fill", "rgba(255,255,255,0.20)");
+      });
+
+      const userY = y(profile[metric]);
+      const userDeviation = Math.abs(profile[metric] - stats.avg);
+      const userSide = profile[metric] >= stats.avg ? 1 : -1;
+      const userX = centerX + userSide * xSpread(userDeviation) * 0.92;
+
+      userG.selectAll("*").remove();
+
+      userG.append("line")
+        .attr("x1", userX)
+        .attr("x2", centerX)
+        .attr("y1", userY)
+        .attr("y2", y(stats.avg))
+        .attr("stroke", "rgba(97,242,167,0.55)")
+        .attr("stroke-width", 1.5)
+        .attr("stroke-dasharray", "5,5");
+
+      userG.append("circle")
+        .attr("cx", userX)
+        .attr("cy", userY)
+        .attr("r", 13)
+        .attr("fill", "rgba(97,242,167,0.12)")
+        .attr("filter", "url(#glow)");
+
+      userG.append("circle")
+        .attr("cx", userX)
+        .attr("cy", userY)
+        .attr("r", 6.2)
+        .attr("fill", "var(--accent)")
+        .attr("stroke", "#e8fff4")
+        .attr("stroke-width", 2.1);
+
+      userG.append("text")
+        .attr("x", userX)
+        .attr("y", userY - 18)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#dffff0")
+        .attr("font-size", 12)
+        .attr("font-weight", 800)
+        .text("YOU");
+
+      annotationG.selectAll("*").remove();
+
+      const relationText =
+        profile[metric] > stats.avg ? "above average" :
+        profile[metric] < stats.avg ? "below average" :
+        "at average";
+
+      annotationG.append("text")
+        .attr("x", 0)
+        .attr("y", innerH + 26)
+        .attr("fill", "#c8d8f4")
+        .attr("font-size", 12)
+        .text(`Interpretation: your ${metricConfig[metric].label.toLowerCase()} is ${relationText} for this comparison group.`);
+    }
+
+    function update(){
+      if(!state.data.length) return;
+
+      const profile = getProfile();
+      const group = filterData(state.data, profile);
+      updateSummaryText(profile, group.length);
+
+      if(group.length < 2){
+        emptyState.classList.add("show");
+        document.getElementById("groupSizeCard").textContent = group.length;
+        document.getElementById("avgCard").textContent = "—";
+        document.getElementById("userCard").textContent = metricConfig[state.metric].format(profile[state.metric]);
+        document.getElementById("pctCard").textContent = "—";
+        return;
+      }
+
+      emptyState.classList.remove("show");
+      const stats = computeStats(group, profile, state.metric);
+      updateCards(stats);
+      draw(group, stats, profile);
+    }
+
+    function debounce(fn, ms) {
+      let timer;
+      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+    const debouncedUpdate = debounce(update, 80);
+
+    function attachListeners(){
+      const numericFields = ["age", "years_experience", "work_hours_per_week", "income"];
+      profileFields.forEach(field => {
+        const el = document.getElementById(field);
+        if(!el) return;
+        const handler = numericFields.includes(field) ? debouncedUpdate : update;
+        el.addEventListener("input", handler);
+        el.addEventListener("change", handler);
+      });
+
+      document.getElementById("ageBand").addEventListener("input", e => {
+        state.ageBand = +e.target.value;
+        document.getElementById("ageBandLabel").textContent = `±${state.ageBand} years`;
+        update();
+      });
+
+      document.getElementById("randomizeBtn").addEventListener("click", generateRandomUser);
+      document.getElementById("resetBtn").addEventListener("click", resetFilters);
+      window.addEventListener("resize", resize);
+    }
+
+    d3.csv(DATA_PATH, d3.autoType).then(data => {
+      state.data = data.map(d => ({
+        ...d,
+        gender: String(d.gender).trim(),
+        education: String(d.education).trim(),
+        province: String(d.province).trim(),
+        employment_status: String(d.employment_status).trim(),
+        industry: String(d.industry).trim(),
+        marital_status: String(d.marital_status).trim(),
+        location_type: String(d.location_type).trim()
+      }));
+
+      categoricalFields.forEach(field => {
+        const values = [...new Set(state.data.map(d => d[field]))].sort(d3.ascending);
+        populateSelect(field, values);
+      });
+
+      initializeMetricButtons();
+      initializeFilterChips();
+      attachListeners();
+
+      const starter = state.data.find(d => d.gender && d.education && d.province) || state.data[0];
+      profileFields.forEach(field => {
+        const el = document.getElementById(field);
+        if(el && starter[field] !== undefined){
+          el.value = starter[field];
+        }
+      });
+
+      state.activeFilters = new Set(["province", "gender"]);
+      document.querySelectorAll(".chip").forEach(chip => {
+        if(state.activeFilters.has(chip.dataset.field)) chip.classList.add("active");
+      });
+
+      resize();
+    }).catch(error => {
+      console.error(error);
+      document.getElementById("emptyState").classList.add("show");
+      document.getElementById("emptyState").innerHTML = `
+        <div>
+          <h3 style="margin:0 0 8px 0;">Could not load the CSV file</h3>
+          <p style="margin:0;color:var(--muted);max-width:440px;">
+            Make sure <strong>index.html</strong> and <strong>life_of_average_dataset.csv</strong>
+            are in the same folder, then open with a local server such as VS Code Live Server.
+          </p>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
